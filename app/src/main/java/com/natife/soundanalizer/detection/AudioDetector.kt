@@ -19,17 +19,9 @@ class AudioDetectorImpl(
     private var _lastPitch = 0f
     private var _lastAmplitude = 0f
 
-    private val dispatcher = AudioDispatcherFactory.fromDefaultMicrophone(22050, 1024, 0)
-//    private val pitchDetectionHandler = PitchDetectionHandler { detectionResult, audioEvent ->
-//        val amplitudes = FloatArray(audioEvent.bufferSize)
-//        val transformBuffer = FloatArray(audioEvent.bufferSize * 2)
-//        val fft = FFT(audioEvent.bufferSize)
-//        System.arraycopy(audioEvent.floatBuffer, 0, transformBuffer, 0, audioEvent.floatBuffer.size)
-//        fft.forwardTransform(transformBuffer)
-//        fft.modulus(transformBuffer, amplitudes)
-//        _lastPitch = detectionResult.pitch.takeIf { it > 0 } ?: _lastAmplitude
-//        _lastAmplitude = amplitudes.maxOf { it }
-//    }
+    private val dispatcher by lazy {
+        AudioDispatcherFactory.fromDefaultMicrophone(22050, 1024, 0)
+    }
 
     private val processor = PitchProcessor(
         PitchProcessor.PitchEstimationAlgorithm.FFT_YIN,
@@ -39,7 +31,6 @@ class AudioDetectorImpl(
     )
 
     init {
-        dispatcher.addAudioProcessor(processor)
         detectionDataHandler.onPitchChanged {
             if (it > 0) {
                 _lastPitch = it
@@ -59,10 +50,12 @@ class AudioDetectorImpl(
     }
 
     override suspend fun start() {
+        dispatcher.addAudioProcessor(processor)
         dispatcher.run()
     }
 
     override fun stop() {
+        dispatcher.removeAudioProcessor(processor)
     }
 
 }
